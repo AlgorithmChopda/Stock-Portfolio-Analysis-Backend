@@ -5,10 +5,6 @@ import requests
 import json
 import html
 
-import html
-
-
-
 # IPO Data
 def scrape_ipo_data(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
