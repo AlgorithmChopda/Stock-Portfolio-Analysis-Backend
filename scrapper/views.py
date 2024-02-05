@@ -116,7 +116,7 @@ def losers(request):
 
 
 # Indices data
-
+# TODO: find different way of doing it from investing.com
 
 # def indices(request):
 #     screener = requests.get('https://in.investing.com/indices/major-indices')
