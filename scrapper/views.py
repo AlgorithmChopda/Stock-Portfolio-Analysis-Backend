@@ -1,6 +1,10 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from datetime import datetime, timedelta
+import yfinance as yf
 from bs4 import BeautifulSoup
 import requests
 import json
@@ -212,3 +216,52 @@ def indices(request):
 
     else:
         return JsonResponse({"error": f"Failed to fetch data. Status code: {response.status_code}"})
+
+
+
+# Data fetch from yfinance
+def fetch_stock_data(request, ticker_symbol):
+    start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+
+    data = yf.download(ticker_symbol, start=start_date, end=datetime.now().strftime('%Y-%m-%d'))['Close']
+    data = data.astype(int)
+
+    result = []
+    for date, close in data.items():
+        result.append({
+            "date": date.strftime('%Y-%m-%d'),
+            "Nifty": int(close)
+        })
+
+    return JsonResponse({"nifty": result}, safe=False)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def fetch_nse_data(request):
+    return fetch_stock_data(request, "^NSEI")
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def fetch_sensex_data(request):
+    return fetch_stock_data(request, "^BSESN")
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def fetch_nifty_bank_data(request):
+    return fetch_stock_data(request, "^NSEBANK")
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def fetch_nifty_it_data(request):
+    return fetch_stock_data(request, "^CNXIT")
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def fetch_nifty_fin_data(request):
+    return fetch_stock_data(request, "NIFTY_FIN_SERVICE.NS")
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def fetch_nifty_fmcg_data(request):
+    return fetch_stock_data(request, "^CNXFMCG")
