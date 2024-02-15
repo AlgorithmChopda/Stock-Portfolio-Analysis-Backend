@@ -1,4 +1,4 @@
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
@@ -54,4 +54,4 @@ def registerAPI(request):
         if user_serializer.is_valid():
             user_serializer.save()
             return JsonResponse("user created successfully", safe=False)
-        return JsonResponse("Failed to add", safe=False)
+        return JsonResponse("failed to create user", safe=False)
