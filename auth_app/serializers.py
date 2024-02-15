@@ -1,5 +1,4 @@
 from rest_framework import serializers
-
 from .models import User
 
 
@@ -18,12 +17,10 @@ class LoginSerializer(serializers.Serializer):
         password = data.get("password")
 
         if not email or not password:
-            raise serializers.ValidationError("Both email and password are required.")
+            raise serializers.ValidationError("email and password are required.")
 
         try:
             user = User.objects.get(email=email, password=password)
             return user
         except User.DoesNotExist:
-            raise serializers.ValidationError(
-                "Invalid credentials. No such user found."
-            )
+            raise serializers.ValidationError("Invalid credentials.")
