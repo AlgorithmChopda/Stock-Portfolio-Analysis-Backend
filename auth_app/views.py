@@ -49,6 +49,7 @@ def loginAPI(request):
 @csrf_exempt
 def registerAPI(request):
     if request.method == "POST":
+        # TODO: add check for same email
         user_data = JSONParser().parse(request)
         user_serializer = UserSerializer(data=user_data)
         if user_serializer.is_valid():
