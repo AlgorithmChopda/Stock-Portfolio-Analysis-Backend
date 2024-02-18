@@ -116,4 +116,5 @@ def cal_cumulative_returns(stock_close):
 
 
 def calculate_variation(ar):
-    return ar.pct_change() * 100
+    result = ar.pct_change() * 100
+    return result.iloc[1:]
