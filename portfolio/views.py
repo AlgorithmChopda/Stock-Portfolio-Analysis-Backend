@@ -19,51 +19,70 @@ class UploadFileView(generics.CreateAPIView):
         reader = pd.read_csv(file)
 
         # TODO: store in DB
-        portfolio = []
-        portfolio_stock = []
-        total_invested = 0
-        profit_loss = 0
-        
+        portfolio_response_list = []
+
         for _, row in reader.iterrows():
-            portfolio.append(
+            percentage_profit_loss = (row["profit_loss"] / row["invested_value"]) * 100
+            portfolio_response_list.append(
                 {
                     "name": row["name"],
-                    "sector": row["sector"],
-                    "buy_price": row["buy_price"],
                     "quantity": row["quantity"],
-                    "profit_loss": row["profit_loss"],
+                    "buy_price": row["buy_price"],
+                    "profit_loss_percentage": round(
+                        percentage_profit_loss, 1
+                    ),  # Round to 1 decimal place
                     "invested_value": row["invested_value"],
                 }
             )
-            portfolio_stock.append(row["name"] + ".NS")
-            total_invested += row["invested_value"]
-            profit_loss += row["profit_loss"]
 
+        portfolio_stock = [stock + ".NS" for stock in reader["name"]]
+        total_invested = reader["invested_value"].sum()
+        profit_loss = float(reader["profit_loss"].sum())
+
+        # portfolio vs nifty
         portfolio_return, nifty_return = comapare_portfolio_nifty(portfolio_stock)
-        
-        portfolio_nifty = build_response_object(portfolio_return.index, portfolio_return, nifty_return)
-        response_object = {"portfolio_nifty": portfolio_nifty, "total_invested": total_invested, "profit_loss": profit_loss}
-        
+        portfolio_nifty = build_portfolio_nifty_list(
+            portfolio_return.index, portfolio_return, nifty_return
+        )
+
+        # sector percentage
+        sector_percentage = (
+            reader.groupby("sector")["invested_value"]
+            .sum()
+            .add(reader.groupby("sector")["profit_loss"].sum())
+            .div(total_invested + profit_loss)
+            .mul(100)
+            .round(1)
+            .reset_index()
+            .rename(columns={0: "percentage"})
+            .to_dict(orient="records")
+        )
+
+        print("type : ", type(total_invested))
+
+        # Market Cap percentage
+        market_cap_percentage = (
+            reader.groupby("market_cap")["invested_value"]
+            .sum()
+            .add(reader.groupby("market_cap")["profit_loss"].sum())
+            .div(total_invested + profit_loss)
+            .mul(100)
+            .round(1)
+            .reset_index()
+            .rename(columns={0: "percentage"})
+            .to_dict(orient="records")
+        )
+
+        response_object = {
+            "portfolio_nifty": portfolio_nifty,
+            "total_invested": total_invested,
+            "profit_loss": profit_loss,
+            "sector_percentage": sector_percentage,
+            "market_cap_percentage": market_cap_percentage,
+            "portfolio": portfolio_response_list
+        }
         return JsonResponse({"status": "success", "data": response_object})
 
-
-# print(
-#     row["name"],
-#     row["sector"],
-#     row["buy_price"],
-#     row["quantity"],
-#     row["profit_loss"],
-#     row["invested_value"],
-# )
-# new_file = File(
-#     name=row["name"],
-#     sector=row["sector"],
-#     quantity=row["quantity"],
-#     buy_price=row["buy_price"],
-#     invested_value=row["invested_value"],
-#     profit_loss=row["profit_loss"],
-# )
-# new_file.save()
 
 def comapare_portfolio_nifty(stock_list):
     portfolio_returns = get_stock_returns(stock_list)
@@ -75,15 +94,15 @@ def comapare_portfolio_nifty(stock_list):
 def get_nifty_returns():
     period = "1y"
     nifty_data_close = get_stock_data("^NSEI", period)["Close"]
-    nifty_last_close = nifty_data_close.resample('M').last()
-    
+    nifty_last_close = nifty_data_close.resample("M").last()
+
     return calculate_variation(nifty_last_close)
 
 
 def get_stock_returns(stock_list):
     stock_close = pd.DataFrame()
     period = "1y"
-    
+
     for stock in stock_list:
         data = get_stock_data(stock, period)
         stock_close[stock] = data["Close"]
@@ -99,7 +118,7 @@ def get_stock_data(ticker, period):
 
 def cal_cumulative_returns_by_month(stock_close):
     stock_close.index = pd.to_datetime(stock_close.index)
-    monthly_average = stock_close.resample('M').last().sum(axis = 1)
+    monthly_average = stock_close.resample("M").last().sum(axis=1)
 
     return monthly_average
 
@@ -107,8 +126,8 @@ def cal_cumulative_returns_by_month(stock_close):
 def cal_cumulative_returns(stock_close):
     ret_df = stock_close.pct_change()
     cumul_ret = (ret_df + 1).cumprod() - 1
-    pf_cumul_ret = cumul_ret.mean(axis = 1)
-    
+    pf_cumul_ret = cumul_ret.mean(axis=1)
+
     return pf_cumul_ret
 
 
@@ -116,14 +135,10 @@ def calculate_variation(ar):
     result = ar.pct_change() * 100
     return result.iloc[1:]
 
-def build_response_object(dates, portfolio, nifty):
+
+def build_portfolio_nifty_list(dates, portfolio, nifty):
     response_object = [
-        {
-            'date': date.strftime('%b'),
-            'portfolio': portfolio,
-            'nifty': nifty
-        }
+        {"date": date.strftime("%b"), "portfolio": portfolio, "nifty": nifty}
         for date, portfolio, nifty in zip(dates, portfolio, nifty)
     ]
-
     return response_object
