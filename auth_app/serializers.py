@@ -23,4 +23,7 @@ class LoginSerializer(serializers.Serializer):
             user = User.objects.get(email=email, password=password)
             return user
         except User.DoesNotExist:
-            raise serializers.ValidationError("Invalid credentials.")
+            raise User.DoesNotExist
+
+    def get_user(self, email):
+        return User.objects.get(email=email)

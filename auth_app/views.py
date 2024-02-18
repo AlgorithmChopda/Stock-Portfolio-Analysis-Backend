@@ -2,6 +2,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
+from rest_framework import serializers
+from django.core.serializers import serialize
 
 from auth_app.models import User
 
@@ -11,36 +13,46 @@ from .serializers import LoginSerializer, UserSerializer
 @csrf_exempt
 def loginAPI(request):
     if request.method == "POST":
-        print("data : ", request)
         data = JSONParser().parse(request)
-        print(data)
         login_serializer = LoginSerializer(data=data)
 
         try:
-            if login_serializer.validate(data):
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "message": "Login successful",
-                        # "data": user,
-                    },
-                    status=200,
-                )
-            else:
-                return JsonResponse(
-                    {
-                        "status": "temp",
-                        "message": "Invalid credentials",
-                        "data": None,
-                    },
-                    status=401,
-                )
-        except Exception as e:
+            user = login_serializer.validate(data)
+            user_response = {"id": user.id, "name": user.username, "email": user.email}
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "message": "Login successful",
+                    "data": user_response
+                },
+                status=200,
+            )
+        except User.DoesNotExist as e:
             return JsonResponse(
                 {
                     "status": "error",
                     "message": "Invalid credentials",
-                    "data": None,
+                    "data": {},
+                },
+                status=401,
+            )
+
+        except serializers.ValidationError as e:
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": e,
+                    "data": {},
+                },
+                status=401,
+            )
+
+        except Exception as e:
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "internal server error",
+                    "data": {},
                 },
                 status=500,
             )
