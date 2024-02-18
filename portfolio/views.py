@@ -46,7 +46,8 @@ class UploadFileView(generics.CreateAPIView):
         print("total_invested", total_invested)
         print("profit_loss", profit_loss)
         
-        response_object = {"portfolio": portfolio_return.values.tolist(), "nifty": nifty_return.values.tolist(), "total_invested": total_invested, "profit_loss": profit_loss}
+        portfolio_nifty = build_response_object(portfolio_return.index, portfolio_return, nifty_return)
+        response_object = {"portfolio_nifty": portfolio_nifty, "total_invested": total_invested, "profit_loss": profit_loss}
         return JsonResponse({"status": "success", "data": response_object})
 
 
@@ -118,3 +119,15 @@ def cal_cumulative_returns(stock_close):
 def calculate_variation(ar):
     result = ar.pct_change() * 100
     return result.iloc[1:]
+
+def build_response_object(dates, portfolio, nifty):
+    response_object = [
+        {
+            'date': date,
+            'portfolio': portfolio,
+            'nifty': nifty
+        }
+        for date, portfolio, nifty in zip(dates, portfolio, nifty)
+    ]
+
+    return response_object
