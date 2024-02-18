@@ -41,13 +41,9 @@ class UploadFileView(generics.CreateAPIView):
 
         portfolio_return, nifty_return = comapare_portfolio_nifty(portfolio_stock)
         
-        print(portfolio_return)
-        print(nifty_return)
-        print("total_invested", total_invested)
-        print("profit_loss", profit_loss)
-        
         portfolio_nifty = build_response_object(portfolio_return.index, portfolio_return, nifty_return)
         response_object = {"portfolio_nifty": portfolio_nifty, "total_invested": total_invested, "profit_loss": profit_loss}
+        
         return JsonResponse({"status": "success", "data": response_object})
 
 
@@ -123,7 +119,7 @@ def calculate_variation(ar):
 def build_response_object(dates, portfolio, nifty):
     response_object = [
         {
-            'date': date,
+            'date': date.strftime('%b'),
             'portfolio': portfolio,
             'nifty': nifty
         }
