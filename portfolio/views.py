@@ -73,13 +73,29 @@ class UploadFileView(generics.CreateAPIView):
             .to_dict(orient="records")
         )
 
+        sorted_data = sorted(
+            portfolio_response_list,
+            key=lambda x: x["profit_loss_percentage"],
+            reverse=True,
+        )
+
+        top_performers = [
+            {
+                "name": entry["name"],
+                "profit_loss_percentage": entry["profit_loss_percentage"],
+            }
+            for entry in sorted_data
+            if entry["profit_loss_percentage"] > 0
+        ][:5]
+
         response_object = {
             "portfolio_nifty": portfolio_nifty,
             "total_invested": total_invested,
             "profit_loss": profit_loss,
             "sector_percentage": sector_percentage,
             "market_cap_percentage": market_cap_percentage,
-            "portfolio": portfolio_response_list
+            "portfolio": portfolio_response_list,
+            "top_performers": top_performers,
         }
         return JsonResponse({"status": "success", "data": response_object})
 
@@ -142,3 +158,7 @@ def build_portfolio_nifty_list(dates, portfolio, nifty):
         for date, portfolio, nifty in zip(dates, portfolio, nifty)
     ]
     return response_object
+
+
+# TODO short and long term performance
+# decide threshold
