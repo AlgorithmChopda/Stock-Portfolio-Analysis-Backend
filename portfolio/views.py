@@ -139,14 +139,6 @@ def cal_cumulative_returns_by_month(stock_close):
     return monthly_average
 
 
-def cal_cumulative_returns(stock_close):
-    ret_df = stock_close.pct_change()
-    cumul_ret = (ret_df + 1).cumprod() - 1
-    pf_cumul_ret = cumul_ret.mean(axis=1)
-
-    return pf_cumul_ret
-
-
 def calculate_variation(ar):
     result = ar.pct_change() * 100
     return result.iloc[1:]
