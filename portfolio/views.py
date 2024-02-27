@@ -2,8 +2,7 @@ import pandas as pd
 from rest_framework import generics
 from django.http import JsonResponse
 import yfinance
-import json
-
+from .constants import fundamental_data, threshold
 
 from .models import File
 from .serializers import FileUploadSerializer
@@ -38,6 +37,20 @@ class UploadFileView(generics.CreateAPIView):
         portfolio_stock = [stock + ".NS" for stock in reader["name"]]
         total_invested = reader["invested_value"].sum()
         profit_loss = float(reader["profit_loss"].sum())
+
+        stock_percentage = {}
+        for row in portfolio_response_list:
+            stock_name = row["name"]
+            percentage = (
+                (
+                    row["invested_value"]
+                    + row["profit_loss_percentage"] * row["invested_value"] / 100
+                )
+                / total_invested
+            ) * 100
+            stock_percentage[stock_name] = round(percentage, 2)
+
+        stock_risk_analysis = risk_analysis(portfolio_stock, stock_percentage)
 
         # portfolio vs nifty
         portfolio_return, nifty_return = comapare_portfolio_nifty(portfolio_stock)
@@ -96,6 +109,7 @@ class UploadFileView(generics.CreateAPIView):
             "market_cap_percentage": market_cap_percentage,
             "portfolio": portfolio_response_list,
             "top_performers": top_performers,
+            "risk_analysis": stock_risk_analysis,
         }
         return JsonResponse({"status": "success", "data": response_object})
 
@@ -152,5 +166,81 @@ def build_portfolio_nifty_list(dates, portfolio, nifty):
     return response_object
 
 
-# TODO short and long term performance
-# decide threshold
+def risk_analysis(stock_list, stock_invested_value):
+    risk_analysis = {}
+    info = ["pe_ratio", "debt_to_equity", "beta", "profit_growth", "sales_growth"]
+    risk_analysis = {prop: {"low": 0, "mid": 0, "high": 0} for prop in info}
+    risk_analysis_output = []
+
+    # for every parameter
+    for prop in info:
+        total_risk = 0
+
+        # calculate the low, mid, high percentage of a prop
+        for stock in stock_list:
+            stock = stock.split(".")[0]
+            stock_percentage = stock_invested_value[stock]
+            val = fundamental_data[stock][prop]
+
+            risk_level = ""
+            if prop == "sales_growth" or prop == "profit_growth":
+                risk_level = (
+                    "low"
+                    if val >= threshold[prop]["low"]
+                    else ("mid" if val >= threshold[prop]["mid"] else "high")
+                )
+            else:
+                risk_level = (
+                    "low"
+                    if val <= threshold[prop]["low"]
+                    else ("mid" if val <= threshold[prop]["mid"] else "high")
+                )
+
+            risk_analysis[prop][risk_level] += stock_percentage
+            total_risk += stock_percentage
+
+        # cal low, mid, high percentage
+        for risk_level in risk_analysis[prop]:
+            risk_analysis[prop][risk_level] = (
+                risk_analysis[prop][risk_level] / total_risk
+            ) * 100
+            risk_analysis[prop][risk_level] = round(risk_analysis[prop][risk_level], 2)
+
+        # get max level and value
+        max_risk_level, max_risk_value = max(
+            risk_analysis[prop].items(), key=lambda x: x[1]
+        )
+
+        # find all stocks in that level
+        stock_output = []
+        for stock in stock_list:
+            stock = stock.split(".")[0]
+            val = fundamental_data[stock][prop]
+
+            risk_level = ""
+            if prop == "sales_growth" or prop == "profit_growth":
+                risk_level = (
+                    "low"
+                    if val >= threshold[prop]["low"]
+                    else ("mid" if val >= threshold[prop]["mid"] else "high")
+                )
+            else:
+                risk_level = (
+                    "low"
+                    if val <= threshold[prop]["low"]
+                    else ("mid" if val <= threshold[prop]["mid"] else "high")
+                )
+
+            if risk_level == max_risk_level:
+                stock_output.append({"name": stock, "value": val})
+
+        risk_analysis_output.append(
+            {
+                "parameter": prop,
+                "level": max_risk_level,
+                "percentage": max_risk_value,
+                "stock": stock_output,
+            }
+        )
+
+    return risk_analysis_output
