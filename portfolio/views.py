@@ -3,6 +3,7 @@ from rest_framework import generics
 from django.http import JsonResponse
 import yfinance
 from .constants import fundamental_data, threshold, risk_weights, convert_range
+import traceback
 
 from .models import File
 from .serializers import FileUploadSerializer
@@ -12,6 +13,7 @@ class UploadFileView(generics.CreateAPIView):
     serializer_class = FileUploadSerializer
 
     def post(self, request, *args, **kwargs):
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         file = serializer.validated_data["file"]
@@ -21,6 +23,7 @@ class UploadFileView(generics.CreateAPIView):
 
         # percetage profit-loss and an response list
         for _, row in reader.iterrows():
+
             percentage_profit_loss = (row["profit_loss"] / row["invested_value"]) * 100
             portfolio_response_list.append(
                 {
@@ -76,8 +79,6 @@ class UploadFileView(generics.CreateAPIView):
             .to_dict(orient="records")
         )
 
-        print("type : ", type(total_invested))
-
         # Market Cap percentage
         market_cap_percentage = (
             reader.groupby("market_cap")["invested_value"]
@@ -106,6 +107,8 @@ class UploadFileView(generics.CreateAPIView):
             if entry["profit_loss_percentage"] > 0
         ][:5]
 
+        total_invested = float(total_invested)
+
         response_object = {
             "portfolio_nifty": portfolio_nifty,
             "total_invested": total_invested,
@@ -117,10 +120,12 @@ class UploadFileView(generics.CreateAPIView):
             "risk_analysis": stock_risk_analysis,
             "risk_rating": risk_rating,
         }
+
         return JsonResponse({"status": "success", "data": response_object})
 
 
 def comapare_portfolio_nifty(stock_list):
+    print("in this")
     portfolio_returns = get_stock_returns(stock_list)
     nifty_returns = get_nifty_returns()
 
@@ -140,6 +145,7 @@ def get_stock_returns(stock_list):
     period = "1y"
 
     for stock in stock_list:
+        print("stock :", stock)
         data = get_stock_data(stock, period)
         stock_close[stock] = data["Close"]
 
