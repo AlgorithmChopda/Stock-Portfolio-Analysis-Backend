@@ -446,4 +446,37 @@ fundamental_data = {
         "sales_growth": 22.6,
         "promoter_holding": 64.3,
     },
+    "CUB": {
+        "debt_to_equity": 7.66,
+        "beta": 1.18,
+        "pe_ratio": 10.1,
+        "profit_growth": 5.45,
+        "sales_growth": 13.0,
+        "promoter_holding": 0.0,
+    },
+    "DABUR": {
+        "debt_to_equity":0.16 ,
+        "beta": 0.78,
+        "pe_ratio": 53.9,
+        "profit_growth": -0.06,
+        "sales_growth": 7.89,
+        "promoter_holding": 66.2,
+    },
+     "TATACONSUM": {
+        "debt_to_equity":0.09 ,
+        "beta": 0.79,
+        "pe_ratio": 87.0,
+        "profit_growth": 21.4,
+        "sales_growth": 11.7,
+        "promoter_holding": 33.6,
+    },
+     "VEDL": {
+        "debt_to_equity": 2.38,
+        "beta": 1.16,
+        "pe_ratio": 19.6,
+        "profit_growth": -64.8,
+        "sales_growth": -2.04,
+        "promoter_holding": 63.7,
+    },
+
 }
