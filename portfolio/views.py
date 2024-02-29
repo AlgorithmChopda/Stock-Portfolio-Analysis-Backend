@@ -2,7 +2,7 @@ import pandas as pd
 from rest_framework import generics
 from django.http import JsonResponse
 import yfinance
-from .constants import fundamental_data, threshold
+from .constants import fundamental_data, threshold, risk_weights, convert_range
 
 from .models import File
 from .serializers import FileUploadSerializer
@@ -17,9 +17,9 @@ class UploadFileView(generics.CreateAPIView):
         file = serializer.validated_data["file"]
         reader = pd.read_csv(file)
 
-        # TODO: store in DB
         portfolio_response_list = []
 
+        # percetage profit-loss and an response list
         for _, row in reader.iterrows():
             percentage_profit_loss = (row["profit_loss"] / row["invested_value"]) * 100
             portfolio_response_list.append(
@@ -34,10 +34,12 @@ class UploadFileView(generics.CreateAPIView):
                 }
             )
 
+        # add .NS for indian stocks
         portfolio_stock = [stock + ".NS" for stock in reader["name"]]
         total_invested = reader["invested_value"].sum()
         profit_loss = float(reader["profit_loss"].sum())
 
+        # stock wise percentage in portfolio
         stock_percentage = {}
         for row in portfolio_response_list:
             stock_name = row["name"]
@@ -50,7 +52,10 @@ class UploadFileView(generics.CreateAPIView):
             ) * 100
             stock_percentage[stock_name] = round(percentage, 2)
 
-        stock_risk_analysis = risk_analysis(portfolio_stock, stock_percentage)
+        # risk analysis
+        stock_risk_analysis, risk_rating = risk_analysis(
+            portfolio_stock, stock_percentage
+        )
 
         # portfolio vs nifty
         portfolio_return, nifty_return = comapare_portfolio_nifty(portfolio_stock)
@@ -110,6 +115,7 @@ class UploadFileView(generics.CreateAPIView):
             "portfolio": portfolio_response_list,
             "top_performers": top_performers,
             "risk_analysis": stock_risk_analysis,
+            "risk_rating": risk_rating,
         }
         return JsonResponse({"status": "success", "data": response_object})
 
@@ -243,4 +249,15 @@ def risk_analysis(stock_list, stock_invested_value):
             }
         )
 
-    return risk_analysis_output
+    weighted_risk_score = 0
+    for item in risk_analysis_output:
+        level = item["level"]
+        percentage = item["percentage"]
+
+        # todo handle if more low percentage
+        weighted_risk_score += risk_weights[level] * percentage
+
+    print("risk :", weighted_risk_score)
+    scaled_risk = convert_range(weighted_risk_score)
+
+    return risk_analysis_output, scaled_risk

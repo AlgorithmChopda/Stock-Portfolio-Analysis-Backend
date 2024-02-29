@@ -21,6 +21,16 @@ threshold = {
     },
 }
 
+risk_weights = {"low": 1, "mid": 2, "high": 3}
+cal_risk_range_min, cal_risk_range_max = 170, 1500
+acl_risk_range_min, acl_risk_range_max = 0, 1000
+convert_range = lambda computed_risk: (
+    (computed_risk - cal_risk_range_min)
+    / (cal_risk_range_max - cal_risk_range_min)
+    * (acl_risk_range_max - acl_risk_range_min)
+    + acl_risk_range_min
+)
+
 fundamental_data = {
     "TATACONSUM": {
         "debt_to_equity": 0.09,
